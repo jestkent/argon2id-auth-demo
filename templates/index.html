@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Argon2id Auth Demo UI</title>
+  <style>
+    body { font-family: Arial; max-width: 820px; margin: 30px auto; padding: 0 14px; }
+    .box { border: 1px solid #ddd; padding: 16px; border-radius: 10px; margin-bottom: 16px; }
+    input { width: 100%; padding: 10px; margin: 8px 0; }
+    button { padding: 10px 14px; cursor: pointer; }
+    pre { background: #f6f6f6; padding: 12px; border-radius: 10px; overflow: auto; }
+    .warn { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 10px; }
+    .good { background: #e6ffed; border: 1px solid #b7ebc6; padding: 12px; border-radius: 10px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Argon2id Auth Demo</h1>
+
+  <div class="warn">
+    <strong>Safety note:</strong> This demo never stores or displays plaintext passwords.
+    Passwords are hashed with <code>Argon2id</code> and stored only as a hash string in the database.
+    The “Explain” section shows only a short prefix of the hash for educational proof.
+  </div>
+
+  <div class="row">
+    <div class="box">
+      <h2>Register</h2>
+      <input id="r_user" placeholder="username" />
+      <input id="r_pass" placeholder="password" type="password" />
+      <button onclick="registerUser()">Register</button>
+    </div>
+
+    <div class="box">
+      <h2>Login</h2>
+      <input id="l_user" placeholder="username" />
+      <input id="l_pass" placeholder="password" type="password" />
+      <button onclick="loginUser()">Login</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Result</h2>
+    <pre id="out">{}</pre>
+  </div>
+
+  <div class="box">
+    <h2>Explain</h2>
+    <div class="good">
+      <div><strong>Stored hash prefix:</strong> <span id="hashPrefix">N/A</span></div>
+      <div style="margin-top:8px;"><strong>rehash_upgraded:</strong> <span id="rehashUpgraded">N/A</span></div>
+      <div style="margin-top:8px;"><strong>Reminder:</strong> <span id="explainNote">N/A</span></div>
+    </div>
+  </div>
+
+<script>
+function setExplainDefaults() {
+  document.getElementById("hashPrefix").textContent = "N/A";
+  document.getElementById("rehashUpgraded").textContent = "N/A";
+  document.getElementById("explainNote").textContent = "N/A";
+}
+
+async function explain(username, rehashUpgradedValue) {
+  if (rehashUpgradedValue !== undefined) {
+    document.getElementById("rehashUpgraded").textContent = String(rehashUpgradedValue);
+  }
+
+  if (!username) return;
+
+  const res = await fetch(`/explain/${encodeURIComponent(username)}`);
+  const text = await res.text();
+
+  try {
+    const data = JSON.parse(text);
+    document.getElementById("hashPrefix").textContent = data.hash_prefix || "N/A";
+    document.getElementById("explainNote").textContent = data.note || "N/A";
+  } catch (e) {
+    document.getElementById("hashPrefix").textContent = "Error reading explain data";
+    document.getElementById("explainNote").textContent = text;
+  }
+}
+
+async function registerUser() {
+  setExplainDefaults();
+
+  const body = {
+    username: document.getElementById("r_user").value.trim(),
+    password: document.getElementById("r_pass").value
+  };
+
+  const res = await fetch("/register", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+
+  const text = await res.text();
+  document.getElementById("out").textContent = text;
+
+  // After register, show hash prefix
+  await explain(body.username);
+}
+
+async function loginUser() {
+  setExplainDefaults();
+
+  const body = {
+    username: document.getElementById("l_user").value.trim(),
+    password: document.getElementById("l_pass").value
+  };
+
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+
+  const text = await res.text();
+  document.getElementById("out").textContent = text;
+
+  // If login succeeded, show explain info and rehash status
+  try {
+    const data = JSON.parse(text);
+    await explain(body.username, data.rehash_upgraded);
+  } catch (e) {
+    // If login failed, still try explain if user exists
+    await explain(body.username);
+  }
+}
+</script>
+</body>
+</html>
