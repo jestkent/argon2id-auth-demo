@@ -1,25 +1,29 @@
-# Argon2id Auth Demo
+# Argon2id Auth Demo (Educational)
 
-A small FastAPI project demonstrating secure password hashing using Argon2id via argon2-cffi.
+A small FastAPI project that demonstrates secure password hashing using **Argon2id** and an educational split UI that shows what the backend is doing (safely).
+
+## Why this exists
+This project is built to demonstrate practical understanding of:
+- Password hashing with **Argon2id** (memory-hard)
+- Safe storage (never plaintext passwords)
+- Verification flow (hash check, no decryption)
+- Rehash-on-login (upgrade hashes when parameters improve)
+- Rate limiting to slow brute-force attempts
+- Clear “client vs server” educational visualization
 
 ## Features
-- Register: hashes passwords with Argon2id
-- Login: verifies password without ever decrypting anything
-- Rehash upgrade: automatically rehashes on login if parameters are outdated
-- Basic rate limiting on login attempts
+- Register and login API endpoints
+- Argon2id hashing via `argon2-cffi`
 - SQLite storage
+- Demo-only server log endpoint for educational purposes
+- Split UI:
+  - Client-side form inputs
+  - Server-side explanation panel (hash prefix, parameters, DB actions)
 
-## Why Argon2id
-Argon2id is a memory-hard password hashing algorithm designed to resist GPU/ASIC brute-force attacks. It includes per-password salts and supports tunable parameters.
-
-## Run
-pip install -r requirements.txt  
+## Run locally (Windows / PowerShell)
+```powershell
+cd argon2id-auth-demo
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
 uvicorn app.main:app --reload
-
-## Endpoints
-POST /register  
-POST /login
-
-## Notes
-- For demo purposes only: /login returns a simple success JSON. In a real system you would issue a session or token.
-- Rate limiting is in-memory. Production should use Redis or an API gateway.
